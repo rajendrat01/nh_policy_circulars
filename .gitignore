@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Generated Data Files
+existing_links.json
+new_circulars.txt
+latest_nhai_page.html
+monitor_log.txt
+complete_extracted_links.txt
+
+# Temporary Files
+*.tmp
+*.log
+*.temp
+
+# IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Keep the original Links.txt as it's the reference data
+# Keep extracted_links.txt as it's the original extracted data 
