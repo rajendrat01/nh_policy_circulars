@@ -11,6 +11,27 @@ Automated web scraper to monitor and extract new circulars from the National Hig
 - ✅ **Comprehensive Logging**: Activity logs for monitoring and debugging
 - ✅ **Multiple Output Formats**: JSON database and readable text reports
 
+## Project Structure
+
+```
+nhai_policy_circulars/
+├── README.md                 # This file
+├── requirements.txt          # Python dependencies
+├── setup.py                  # Setup script
+├── .gitignore               # Git ignore rules
+├── src/                     # Source code
+│   ├── nhai_scraper.py      # Main scraper script
+│   ├── auto_monitor.py      # Automated monitoring script
+│   └── demo.py              # Demo/testing script
+├── data/                    # Input data files
+│   └── extracted_links.txt  # Original extracted links reference
+├── output/                  # Generated output files
+│   ├── existing_links.json  # Complete database of circulars
+│   ├── new_circulars.txt    # Latest new circulars found
+│   └── latest_nhai_page.html # Downloaded HTML from NHAI website
+└── nhai_circulars_env/      # Python virtual environment
+```
+
 ## Quick Start
 
 ### 1. Setup
@@ -24,13 +45,13 @@ This will:
 
 ### 2. Run Once
 ```bash
-python nhai_scraper.py
+python src/nhai_scraper.py
 ```
 Fetches latest circulars and checks for new ones.
 
 ### 3. Start Monitoring
 ```bash
-python auto_monitor.py monitor
+python src/auto_monitor.py monitor
 ```
 Starts continuous monitoring (default: checks every 6 hours).
 
@@ -39,46 +60,46 @@ Starts continuous monitoring (default: checks every 6 hours).
 ### Manual Scraping
 ```bash
 # Run scraper once
-python nhai_scraper.py
+python src/nhai_scraper.py
 
 # Check results
-cat new_circulars.txt  # New circulars found
-cat existing_links.json  # Complete database
+cat output/new_circulars.txt  # New circulars found
+cat output/existing_links.json  # Complete database
 ```
 
 ### Automated Monitoring
 ```bash
 # Run once and exit
-python auto_monitor.py once
+python src/auto_monitor.py once
 
 # Monitor every 6 hours (default)
-python auto_monitor.py monitor
+python src/auto_monitor.py monitor
 
 # Monitor every 2 hours
-python auto_monitor.py monitor 2
+python src/auto_monitor.py monitor 2
 
 # Interactive mode
-python auto_monitor.py
+python src/auto_monitor.py
 ```
 
 ### Command Line Options
 ```bash
-python auto_monitor.py help    # Show all options
+python src/auto_monitor.py help    # Show all options
 ```
 
 ## Files Created
 
-| File | Description |
-|------|-------------|
-| `existing_links.json` | Complete database of all circulars (JSON format) |
-| `new_circulars.txt` | New circulars found in latest check |
-| `latest_nhai_page.html` | Raw HTML downloaded from website |
-| `monitor_log.txt` | Activity log for automated monitoring |
-| `extracted_links.txt` | Original manual extraction results |
+| File | Description | Location |
+|------|-------------|----------|
+| `output/existing_links.json` | Complete database of all circulars (JSON format) | Generated |
+| `output/new_circulars.txt` | New circulars found in latest check | Generated |
+| `output/latest_nhai_page.html` | Raw HTML downloaded from website | Generated |
+| `monitor_log.txt` | Activity log for automated monitoring | Generated |
+| `data/extracted_links.txt` | Original manual extraction results | Reference data |
 
-## Output Format
+### Output Format
 
-### New Circulars (`new_circulars.txt`)
+### New Circulars (`output/new_circulars.txt`)
 ```
 NEW NHAI CIRCULARS FOUND - 2025-01-11 10:30:15
 ============================================================
@@ -93,7 +114,7 @@ Total New Circulars: 3
 --------------------------------------------------
 ```
 
-### Database (`existing_links.json`)
+### Database (`output/existing_links.json`)
 ```json
 [
   {
@@ -156,7 +177,7 @@ python setup.py
 ### Method 2: Manual Setup
 ```bash
 pip install -r requirements.txt
-python nhai_scraper.py  # Create initial baseline
+python src/nhai_scraper.py  # Create initial baseline
 ```
 
 ## Scheduling Options
@@ -164,22 +185,22 @@ python nhai_scraper.py  # Create initial baseline
 ### Windows Task Scheduler
 Create a scheduled task to run:
 ```cmd
-python D:\AItools\auto_monitor.py once
+python D:\path\to\project\src\auto_monitor.py once
 ```
 
 ### Linux Cron
 ```bash
 # Check every 6 hours
-0 */6 * * * cd /path/to/project && python auto_monitor.py once
+0 */6 * * * cd /path/to/project && python src/auto_monitor.py once
 
 # Check daily at 9 AM
-0 9 * * * cd /path/to/project && python auto_monitor.py once
+0 9 * * * cd /path/to/project && python src/auto_monitor.py once
 ```
 
 ### Keep Monitoring Active
 ```bash
 # Run continuously (will restart on system reboot)
-python auto_monitor.py monitor 6
+python src/auto_monitor.py monitor 6
 ```
 
 ## Troubleshooting
@@ -197,11 +218,11 @@ python auto_monitor.py monitor 6
 
 3. **"No new circulars detected"**
    - This is normal - means no new circulars since last check
-   - Check `existing_links.json` to see all circulars in database
+   - Check `output/existing_links.json` to see all circulars in database
 
 4. **"Permission denied writing files"**
    - Run from a directory where you have write permissions
-   - On Windows, avoid running from C:\ drive root
+   - Ensure the `output/` directory exists and is writable
 
 ### Debug Mode
 Add debug logging by modifying the scraper:
@@ -214,8 +235,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 To extend or modify the scraper:
 
-1. **Add new extraction patterns**: Modify `extract_links_from_html()` in `nhai_scraper.py`
-2. **Change monitoring intervals**: Modify `auto_monitor.py`
+1. **Add new extraction patterns**: Modify `extract_links_from_html()` in `src/nhai_scraper.py`
+2. **Change monitoring intervals**: Modify `src/auto_monitor.py`
 3. **Add notifications**: Extend `save_new_circulars()` to send emails/SMS
 4. **Export formats**: Add CSV/Excel export options
 
@@ -232,5 +253,5 @@ For issues or questions:
 
 ---
 
-**Last Updated**: January 2025  
-**Version**: 1.0.0 
+**Last Updated**: July 2025  
+**Version**: 2.0.0 
