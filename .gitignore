@@ -24,13 +24,14 @@ wheels/
 venv/
 env/
 ENV/
+nhai_circulars_env/
 
 # Generated Data Files
-existing_links.json
-new_circulars.txt
-latest_nhai_page.html
-monitor_log.txt
-complete_extracted_links.txt
+# existing_links.json
+# new_circulars.txt
+# latest_nhai_page.html
+# monitor_log.txt
+# complete_extracted_links.txt
 
 # Temporary Files
 *.tmp

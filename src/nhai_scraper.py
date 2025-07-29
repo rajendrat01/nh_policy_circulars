@@ -20,8 +20,8 @@ class NHAIScraper:
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         
-        self.existing_links_file = "existing_links.json"
-        self.new_links_file = "new_circulars.txt"
+        self.existing_links_file = "output/existing_links.json"
+        self.new_links_file = "output/new_circulars.txt"
     
     def fetch_webpage(self, url: str, max_retries: int = 3) -> str:
         """Fetch webpage content with retry mechanism"""
@@ -165,10 +165,10 @@ class NHAIScraper:
                 return False
             
             # Save the raw HTML for reference
-            with open("latest_nhai_page.html", "w", encoding="utf-8") as f:
+            with open("output/latest_nhai_page.html", "w", encoding="utf-8") as f:
                 f.write(html_content)
-            print("Raw HTML saved to latest_nhai_page.html")
-            
+            print("Raw HTML saved to output/latest_nhai_page.html")
+
             # Try to extract links using multiple patterns
             print("Extracting links from HTML...")
             current_links = self.extract_links_from_html(html_content)
