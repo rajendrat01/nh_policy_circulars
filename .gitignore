@@ -6,6 +6,9 @@ __pycache__/
 # latest_nhai_page.html
 # complete_extracted_links.txt
 
+# Vector Database
+output/chroma_db/
+
 # Log Files
 logs/
 # monitor_log.txtpy.class

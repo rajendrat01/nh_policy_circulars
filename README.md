@@ -17,18 +17,22 @@ Automated web scraper to monitor and extract new circulars from the National Hig
 nhai_policy_circulars/
 ├── README.md                 # This file
 ├── requirements.txt          # Python dependencies
+├── requirements-rag.txt      # RAG and OCR dependencies
 ├── setup.py                  # Setup script
 ├── .gitignore               # Git ignore rules
+├── query_circulars.py        # Interactive search interface
 ├── src/                     # Source code
 │   ├── nhai_scraper.py      # Main scraper script
 │   ├── auto_monitor.py      # Automated monitoring script
+│   ├── rag_indexer.py       # RAG indexer with OCR support
 │   └── demo.py              # Demo/testing script
 ├── data/                    # Input data files
 │   └── extracted_links.txt  # Original extracted links reference
 ├── output/                  # Generated output files
 │   ├── existing_links.json  # Complete database of circulars
 │   ├── new_circulars.txt    # Latest new circulars found
-│   └── latest_nhai_page.html # Downloaded HTML from NHAI website
+│   ├── latest_nhai_page.html # Downloaded HTML from NHAI website
+│   └── chroma_db/           # Vector database for RAG
 ├── logs/                    # Log files
 │   └── monitor_log.txt      # Monitoring activity log
 └── nhai_circulars_env/      # Python virtual environment
@@ -69,6 +73,21 @@ python src/auto_monitor.py monitor
 ```
 Starts continuous monitoring (default: checks every 6 hours).
 
+### 5. RAG Search (Optional)
+```bash
+# Install RAG dependencies
+pip install -r requirements-rag.txt
+
+# Index all circulars for AI-powered search
+python src/rag_indexer.py index
+
+# Interactive search interface
+python query_circulars.py
+
+# Command-line search
+python query_circulars.py "environmental clearance requirements"
+```
+
 ## Detailed Usage
 
 ### Manual Scraping
@@ -101,6 +120,21 @@ python src/auto_monitor.py
 python src/auto_monitor.py help    # Show all options
 ```
 
+### RAG-Powered Search
+```bash
+# Index circulars for AI search (one-time setup)
+python src/rag_indexer.py index
+
+# Interactive search
+python query_circulars.py
+
+# Direct command-line search
+python query_circulars.py "What are the safety requirements?"
+
+# Get indexing statistics
+python src/rag_indexer.py stats
+```
+
 ## Files Created
 
 | File | Description | Location |
@@ -108,6 +142,7 @@ python src/auto_monitor.py help    # Show all options
 | `output/existing_links.json` | Complete database of all circulars (JSON format) | Generated |
 | `output/new_circulars.txt` | New circulars found in latest check | Generated |
 | `output/latest_nhai_page.html` | Raw HTML downloaded from website | Generated |
+| `output/chroma_db/` | Vector database for RAG search | Generated (optional) |
 | `logs/monitor_log.txt` | Activity log for automated monitoring | Generated |
 | `data/extracted_links.txt` | Original manual extraction results | Reference data |
 
@@ -206,7 +241,23 @@ pip install -r requirements.txt
 python src/nhai_scraper.py  # Create initial baseline
 ```
 
-### Method 3: System-wide Installation (Not Recommended)
+### Method 3: RAG-Enabled Installation (AI Search)
+```bash
+# Create virtual environment
+python -m venv nhai_circulars_env
+source nhai_circulars_env/bin/activate  # Linux/Mac
+# nhai_circulars_env\Scripts\activate   # Windows
+
+# Install all dependencies (including RAG)
+pip install -r requirements.txt
+pip install -r requirements-rag.txt
+
+# Setup and index for AI search
+python setup.py
+python src/rag_indexer.py index
+```
+
+### Method 4: System-wide Installation (Not Recommended)
 ```bash
 pip install -r requirements.txt
 python src/nhai_scraper.py  # Create initial baseline
@@ -282,6 +333,48 @@ To extend or modify the scraper:
 2. **Change monitoring intervals**: Modify `src/auto_monitor.py`
 3. **Add notifications**: Extend `save_new_circulars()` to send emails/SMS
 4. **Export formats**: Add CSV/Excel export options
+5. **RAG Integration**: Add LangChain-based RAG with OCR support
+
+### RAG + OCR Integration with LangChain
+
+For AI-powered search with OCR support for scanned PDFs:
+
+**LangChain + Unstructured (Recommended for OCR)**
+```bash
+pip install langchain chromadb unstructured[all-docs] openai
+```
+
+**Key Features:**
+- ✅ **Automatic OCR**: Handles both text and scanned PDFs
+- ✅ **Smart Chunking**: Intelligent text splitting for better retrieval
+- ✅ **Vector Search**: Semantic similarity search with embeddings
+- ✅ **Metadata Preservation**: Policy numbers, dates, categories
+- ✅ **Multi-format Support**: PDFs, images, documents
+
+**Alternative OCR Options:**
+```bash
+# Option 1: EasyOCR (Good for multilingual)
+pip install easyocr PyMuPDF pillow
+
+# Option 2: Tesseract (Traditional OCR)
+pip install pytesseract
+sudo apt-get install tesseract-ocr  # Linux
+```
+
+**Query Examples:**
+```python
+# Semantic search across all circulars
+results = vectorstore.similarity_search(
+    "What are the environmental clearance requirements?", 
+    k=5
+)
+
+# Search with metadata filtering
+results = vectorstore.similarity_search(
+    "safety protocols",
+    filter={"date": {"$gte": "2025-01-01"}}
+)
+```
 
 ## License
 
