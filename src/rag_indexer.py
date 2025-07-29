@@ -57,6 +57,10 @@ class NHAIRAGIndexer:
         self.vector_db_path = "output/chroma_db"
         os.makedirs(self.vector_db_path, exist_ok=True)
         
+        # PDF storage directory
+        self.pdf_storage_path = "output/pdfs"
+        os.makedirs(self.pdf_storage_path, exist_ok=True)
+        
         # Initialize OCR reader if available
         self.ocr_reader = None
         if OCR_AVAILABLE:
@@ -68,17 +72,22 @@ class NHAIRAGIndexer:
         
         print(f"✓ RAG Indexer initialized with model: {embedding_model}")
     
-    def extract_pdf_content(self, pdf_url: str, use_ocr: bool = True) -> tuple[str, bool]:
+    def extract_pdf_content(self, pdf_url: str, policy_no: str, use_ocr: bool = True) -> tuple[str, bool, str]:
         """
         Extract text content from PDF with OCR fallback
         
         Args:
             pdf_url: URL to the PDF file
+            policy_no: Policy number for filename
             use_ocr: Whether to use OCR for scanned PDFs
             
         Returns:
-            tuple: (extracted_text, used_ocr)
+            tuple: (extracted_text, used_ocr, local_pdf_path)
         """
+        # Create safe filename
+        safe_filename = f"{policy_no.replace('/', '_').replace('.', '_')}.pdf"
+        local_pdf_path = os.path.join(self.pdf_storage_path, safe_filename)
+        
         temp_file = None
         try:
             # Download PDF to temporary file
@@ -98,25 +107,40 @@ class NHAIRAGIndexer:
             # Check if text extraction was successful
             if len(text_content.strip()) > 100:
                 print(f"✓ Text extracted successfully ({len(text_content)} chars)")
-                return text_content, False
-            
+                used_ocr = False
             # Fallback to OCR if text is too short (likely scanned)
             elif use_ocr and self.ocr_reader:
                 print("Text extraction insufficient, trying OCR...")
                 ocr_content = self._extract_text_ocr(temp_file)
                 if len(ocr_content.strip()) > 50:
                     print(f"✓ OCR extraction successful ({len(ocr_content)} chars)")
-                    return ocr_content, True
+                    text_content = ocr_content
+                    used_ocr = True
                 else:
                     print("⚠ OCR extraction yielded minimal text")
-                    return text_content, False
+                    used_ocr = False
             else:
                 print("⚠ No OCR available, using basic text extraction")
-                return text_content, False
+                used_ocr = False
+            
+            # Save PDF permanently if we got good content
+            if len(text_content.strip()) > 50:
+                try:
+                    # Copy to permanent storage
+                    import shutil
+                    shutil.copy2(temp_file, local_pdf_path)
+                    print(f"✓ PDF saved to {local_pdf_path}")
+                except Exception as e:
+                    print(f"⚠ Could not save PDF locally: {e}")
+                    local_pdf_path = ""
+            else:
+                local_pdf_path = ""
+                
+            return text_content, used_ocr, local_pdf_path
                 
         except Exception as e:
             print(f"✗ Error extracting PDF content: {e}")
-            return "", False
+            return "", False, ""
         finally:
             # Cleanup temporary file
             if temp_file and os.path.exists(temp_file):
@@ -243,8 +267,9 @@ class NHAIRAGIndexer:
                 print(f"\n[{i+1}/{len(circulars)}] Processing: {circular['policy_no']}")
                 
                 # Extract content with OCR
-                content, used_ocr = self.extract_pdf_content(
+                content, used_ocr, local_pdf_path = self.extract_pdf_content(
                     circular['direct_pdf_url'], 
+                    circular['policy_no'],
                     use_ocr=True
                 )
                 
@@ -260,6 +285,7 @@ class NHAIRAGIndexer:
                     'date': circular['date'],
                     'url': circular['full_url'],
                     'link_path': circular['link_path'],
+                    'local_pdf_path': local_pdf_path,
                     'category': 'NHAI_Circular',
                     'extracted_on': circular.get('extracted_on', datetime.now().isoformat()),
                     'indexed_on': datetime.now().isoformat(),
