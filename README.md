@@ -34,7 +34,19 @@ nhai_policy_circulars/
 
 ## Quick Start
 
-### 1. Setup
+### 1. Create Virtual Environment (Recommended)
+```bash
+# Create virtual environment
+python -m venv nhai_circulars_env
+
+# Activate virtual environment
+# On Linux/Mac:
+source nhai_circulars_env/bin/activate
+# On Windows:
+# nhai_circulars_env\Scripts\activate
+```
+
+### 2. Setup
 ```bash
 python setup.py
 ```
@@ -43,13 +55,13 @@ This will:
 - Create initial baseline of existing circulars
 - Set up the monitoring system
 
-### 2. Run Once
+### 3. Run Once
 ```bash
 python src/nhai_scraper.py
 ```
 Fetches latest circulars and checks for new ones.
 
-### 3. Start Monitoring
+### 4. Start Monitoring
 ```bash
 python src/auto_monitor.py monitor
 ```
@@ -169,12 +181,30 @@ The scraper monitors all NHAI circular categories including:
 
 ## Installation
 
-### Method 1: Automatic Setup
+### Method 1: Automatic Setup (Recommended)
 ```bash
+# Create virtual environment
+python -m venv nhai_circulars_env
+source nhai_circulars_env/bin/activate  # Linux/Mac
+# nhai_circulars_env\Scripts\activate   # Windows
+
+# Run setup
 python setup.py
 ```
 
 ### Method 2: Manual Setup
+```bash
+# Create virtual environment
+python -m venv nhai_circulars_env
+source nhai_circulars_env/bin/activate  # Linux/Mac
+# nhai_circulars_env\Scripts\activate   # Windows
+
+# Install dependencies and create baseline
+pip install -r requirements.txt
+python src/nhai_scraper.py  # Create initial baseline
+```
+
+### Method 3: System-wide Installation (Not Recommended)
 ```bash
 pip install -r requirements.txt
 python src/nhai_scraper.py  # Create initial baseline
@@ -185,20 +215,31 @@ python src/nhai_scraper.py  # Create initial baseline
 ### Windows Task Scheduler
 Create a scheduled task to run:
 ```cmd
+# If using virtual environment
+D:\path\to\project\nhai_circulars_env\Scripts\python.exe D:\path\to\project\src\auto_monitor.py once
+
+# If using system Python
 python D:\path\to\project\src\auto_monitor.py once
 ```
 
 ### Linux Cron
 ```bash
-# Check every 6 hours
-0 */6 * * * cd /path/to/project && python src/auto_monitor.py once
+# If using virtual environment - check every 6 hours
+0 */6 * * * cd /path/to/project && ./nhai_circulars_env/bin/python src/auto_monitor.py once
 
-# Check daily at 9 AM
-0 9 * * * cd /path/to/project && python src/auto_monitor.py once
+# If using virtual environment - check daily at 9 AM
+0 9 * * * cd /path/to/project && ./nhai_circulars_env/bin/python src/auto_monitor.py once
+
+# If using system Python
+0 */6 * * * cd /path/to/project && python src/auto_monitor.py once
 ```
 
 ### Keep Monitoring Active
 ```bash
+# Activate virtual environment first (if using one)
+source nhai_circulars_env/bin/activate  # Linux/Mac
+# nhai_circulars_env\Scripts\activate   # Windows
+
 # Run continuously (will restart on system reboot)
 python src/auto_monitor.py monitor 6
 ```

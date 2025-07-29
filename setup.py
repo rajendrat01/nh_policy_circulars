@@ -22,6 +22,8 @@ def create_initial_baseline():
     """Create initial baseline by running the scraper once"""
     print("\nCreating initial baseline...")
     try:
+        # Add src directory to path to import the module
+        sys.path.insert(0, 'src')
         from nhai_scraper import NHAIScraper
         scraper = NHAIScraper()
         
@@ -30,7 +32,7 @@ def create_initial_baseline():
         
         if success:
             print("✓ Initial baseline created!")
-            print("  - All current circulars saved to existing_links.json")
+            print("  - All current circulars saved to output/existing_links.json")
             print("  - Future runs will detect new circulars")
             return True
         else:
@@ -60,13 +62,13 @@ def main():
     print("\n" + "=" * 40)
     print("Setup completed successfully!")
     print("\nHow to use:")
-    print("1. python nhai_scraper.py          - Run scraper once")
-    print("2. python auto_monitor.py once     - Check for new circulars")
-    print("3. python auto_monitor.py monitor  - Start continuous monitoring")
+    print("1. python src/nhai_scraper.py          - Run scraper once")
+    print("2. python src/auto_monitor.py once     - Check for new circulars")
+    print("3. python src/auto_monitor.py monitor  - Start continuous monitoring")
     print("\nFiles:")
-    print("- existing_links.json  : Database of all circulars")
-    print("- new_circulars.txt    : New circulars found")
-    print("- monitor_log.txt      : Monitoring activity log")
+    print("- output/existing_links.json  : Database of all circulars")
+    print("- output/new_circulars.txt    : New circulars found")
+    print("- output/monitor_log.txt      : Monitoring activity log")
     
     return True
 

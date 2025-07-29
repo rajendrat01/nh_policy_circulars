@@ -22,6 +22,9 @@ class NHAIScraper:
         
         self.existing_links_file = "output/existing_links.json"
         self.new_links_file = "output/new_circulars.txt"
+        
+        # Ensure output directory exists
+        os.makedirs("output", exist_ok=True)
     
     def fetch_webpage(self, url: str, max_retries: int = 3) -> str:
         """Fetch webpage content with retry mechanism"""
@@ -292,9 +295,9 @@ def main():
     
     if success:
         print("\nFiles created/updated:")
-        print("- latest_nhai_page.html (raw HTML)")
-        print("- existing_links.json (all circulars database)")
-        print("- new_circulars.txt (new circulars only)")
+        print("- output/latest_nhai_page.html (raw HTML)")
+        print("- output/existing_links.json (all circulars database)")
+        print("- output/new_circulars.txt (new circulars only)")
     
     return success
 

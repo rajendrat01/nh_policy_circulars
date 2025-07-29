@@ -14,7 +14,10 @@ from nhai_scraper import NHAIScraper
 class NHAIMonitor:
     def __init__(self):
         self.scraper = NHAIScraper()
-        self.log_file = "monitor_log.txt"
+        self.log_file = "output/monitor_log.txt"
+        
+        # Ensure output directory exists
+        os.makedirs("output", exist_ok=True)
     
     def log_message(self, message: str):
         """Log message with timestamp"""
@@ -35,11 +38,11 @@ class NHAIMonitor:
             
             if success:
                 # Check if any new circulars were found
-                if os.path.exists("new_circulars.txt"):
-                    with open("new_circulars.txt", "r", encoding="utf-8") as f:
+                if os.path.exists("output/new_circulars.txt"):
+                    with open("output/new_circulars.txt", "r", encoding="utf-8") as f:
                         content = f.read()
                         if "Total New Circulars: 0" not in content:
-                            self.log_message("✓ NEW CIRCULARS DETECTED! Check new_circulars.txt")
+                            self.log_message("✓ NEW CIRCULARS DETECTED! Check output/new_circulars.txt")
                         else:
                             self.log_message("✓ Check completed - No new circulars")
                 else:
@@ -132,10 +135,10 @@ def print_help():
     print("Interactive mode: python auto_monitor.py")
     print()
     print("Files created:")
-    print("- monitor_log.txt     : Monitoring activity log")
-    print("- new_circulars.txt   : New circulars found")
-    print("- existing_links.json : Complete circulars database")
-    print("- latest_nhai_page.html : Latest downloaded webpage")
+    print("- output/monitor_log.txt     : Monitoring activity log")
+    print("- output/new_circulars.txt   : New circulars found")
+    print("- output/existing_links.json : Complete circulars database")
+    print("- output/latest_nhai_page.html : Latest downloaded webpage")
 
 if __name__ == "__main__":
     main() 
