@@ -29,6 +29,8 @@ nhai_policy_circulars/
 │   ├── existing_links.json  # Complete database of circulars
 │   ├── new_circulars.txt    # Latest new circulars found
 │   └── latest_nhai_page.html # Downloaded HTML from NHAI website
+├── logs/                    # Log files
+│   └── monitor_log.txt      # Monitoring activity log
 └── nhai_circulars_env/      # Python virtual environment
 ```
 
@@ -106,7 +108,7 @@ python src/auto_monitor.py help    # Show all options
 | `output/existing_links.json` | Complete database of all circulars (JSON format) | Generated |
 | `output/new_circulars.txt` | New circulars found in latest check | Generated |
 | `output/latest_nhai_page.html` | Raw HTML downloaded from website | Generated |
-| `monitor_log.txt` | Activity log for automated monitoring | Generated |
+| `logs/monitor_log.txt` | Activity log for automated monitoring | Generated |
 | `data/extracted_links.txt` | Original manual extraction results | Reference data |
 
 ### Output Format
@@ -289,7 +291,7 @@ This project is for educational and monitoring purposes. Please respect the NHAI
 
 For issues or questions:
 1. Check the troubleshooting section above
-2. Review the log files (`monitor_log.txt`)
+2. Review the log files (`logs/monitor_log.txt`)
 3. Ensure all dependencies are installed correctly
 
 ---

@@ -68,7 +68,7 @@ def main():
     print("\nFiles:")
     print("- output/existing_links.json  : Database of all circulars")
     print("- output/new_circulars.txt    : New circulars found")
-    print("- output/monitor_log.txt      : Monitoring activity log")
+    print("- logs/monitor_log.txt        : Monitoring activity log")
     
     return True
 

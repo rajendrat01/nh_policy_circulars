@@ -14,10 +14,11 @@ from nhai_scraper import NHAIScraper
 class NHAIMonitor:
     def __init__(self):
         self.scraper = NHAIScraper()
-        self.log_file = "output/monitor_log.txt"
+        self.log_file = "logs/monitor_log.txt"
         
-        # Ensure output directory exists
+        # Ensure output and logs directories exist
         os.makedirs("output", exist_ok=True)
+        os.makedirs("logs", exist_ok=True)
     
     def log_message(self, message: str):
         """Log message with timestamp"""
@@ -135,7 +136,7 @@ def print_help():
     print("Interactive mode: python auto_monitor.py")
     print()
     print("Files created:")
-    print("- output/monitor_log.txt     : Monitoring activity log")
+    print("- logs/monitor_log.txt       : Monitoring activity log")
     print("- output/new_circulars.txt   : New circulars found")
     print("- output/existing_links.json : Complete circulars database")
     print("- output/latest_nhai_page.html : Latest downloaded webpage")
