@@ -32,6 +32,9 @@ output/chroma_db/
 logs/
 *.log
 
+# Environment Configuration
+*.env
+
 # Virtual Environment
 venv/
 env/
@@ -47,6 +50,22 @@ nhai_circulars_env/
 # Temporary Files
 *.tmp
 *.temp
+
+# Generated Data & Output Files
+# Ignore the entire output directory to prevent any generated data from being committed.
+# Individual files that SHOULD be tracked can be explicitly un-ignored with ! if needed.
+output/
+nohup.out
+wget-log
+page_source.html
+latest_nhai_page.html
+
+# Downloaded binaries, drivers, and archives
+geckodriver
+firefox.tar.bz2
+firefox-aarch64.tar.xz
+*.tar.gz
+index.html?product=firefox-esr-latest*
 
 # IDE Files
 .vscode/

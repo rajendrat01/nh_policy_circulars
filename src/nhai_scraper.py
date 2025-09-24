@@ -6,6 +6,95 @@ import os
 from datetime import datetime
 from typing import Dict, List, Set
 import time
+from bs4 import BeautifulSoup
+
+def parse_category_tree(tree_text: str):
+    categories = {}
+    current_cat = None
+    
+    for line in tree_text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("Search For All Latest Updated Circulars"):
+            continue
+        
+        # Match pattern like: '1.2.1 Facilities/entitlement (Deputatinist)+'
+        m = re.match(r"(\d+(?:\.\d+)*)(?:\s+)(.+)\+", line)
+        if m:
+            code = m.group(1)
+            title = m.group(2).strip()
+
+            parts = code.split('.')
+            if len(parts) == 1:
+                # Top-level category
+                current_cat = code
+                categories[current_cat] = {
+                    "title": title,
+                    "sub_categories": {}
+                }
+            else:
+                # Sub-category (or deeper) under current top-level category
+                if current_cat:
+                    categories[current_cat]["sub_categories"][code] = title
+
+    return categories
+
+
+# def scrape_category_tree_from_live(url: str):
+#     response = requests.get(url, verify=False)
+#     response.raise_for_status()
+#     soup = BeautifulSoup(response.text, "html.parser")
+    
+#     # Find the element(s) containing the tree text (Example assumes it's in a <div> or <pre>)
+#     # You need to inspect the real live HTML for exact selector
+#     tree_container = soup.find("div", id="treeContainer")  # Update selector as per page
+#     if not tree_container:
+#         print("not tree_container")
+#         # fallback: full text extraction or another selector
+#         tree_container = soup.find("pre") or soup.body
+
+#     tree_text = tree_container.get_text(separator="\n", strip=True)
+
+#     print("Extracted category tree text sample:")
+#     print(tree_text[:500])  # print first 500 chars for inspection
+
+#     # Parse the extracted tree text with your existing parser
+#     category_tree = parse_category_tree(tree_text)
+#     return category_tree
+
+def scrape_categories_from_live(html_content: str):
+    soup = BeautifulSoup(html_content, "html.parser")
+    categories = {}
+    select = soup.find("select", id="MainContent_DropDownList1")
+    if select:
+        options = select.find_all("option")
+        for opt in options:
+            val = opt.get("value")
+            text = opt.get_text(strip=True)
+            if val and val.isdigit():
+                categories[val] = text
+    return categories
+
+
+def get_form_data(soup: BeautifulSoup) -> Dict[str, str]:
+    """Extracts hidden ASP.NET form fields needed for postbacks."""
+    form_data = {}
+    for input_tag in soup.find_all("input", type="hidden"):
+        if input_tag.get("name"):
+            form_data[input_tag.get("name")] = input_tag.get("value", "")
+    return form_data
+
+
+def save_category_tree(tree: dict, filepath: str):
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(tree, f, indent=2, ensure_ascii=False)
+
+def load_category_tree(filepath: str):
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+
 
 class NHAIScraper:
     def __init__(self):
@@ -22,9 +111,53 @@ class NHAIScraper:
         
         self.existing_links_file = "output/existing_links.json"
         self.new_links_file = "output/new_circulars.txt"
+
+        self.category_tree_file = "output/category_tree.json"
         
+        self.category_tree = {}
+
         # Ensure output directory exists
         os.makedirs("output", exist_ok=True)
+
+    
+
+    def update_category_tree(self):
+        tree = load_category_tree(self.category_tree_file)
+        if tree:
+            print("Loaded category tree from file.")
+            self.category_tree = tree
+        else:
+            print("Fetching category tree from live site...")
+            tree = scrape_category_tree_from_live(f"{self.base_url}/CircularTree")
+            save_category_tree(tree, self.category_tree_file)
+            self.category_tree = tree
+            print("Category tree saved locally.")
+
+    def load_category_tree_from_text(self, tree_text):
+        self.category_tree = parse_category_tree(tree_text)
+
+    def find_category_for_policy_no(self, policy_no: str):
+        # Return category and sub_category based on prefix matching policy_no
+        
+        # Extract numeric prefix from policy_no for matching
+        # Assume policy_no starts with something like '1.2.1' or '7.1', otherwise fallback
+        match = re.match(r"(\d+(?:\.\d+)*)", policy_no)
+        if not match:
+            return ("Unknown", "Unknown")
+        prefix = match.group(1)
+        
+        # Check top-level categories first
+        top_level = prefix.split('.')[0]
+        if top_level in self.category_tree:
+            cat_title = self.category_tree[top_level]["title"]
+            # Try subcategories match by prefix
+            for sub_code, sub_title in self.category_tree[top_level]["sub_categories"].items():
+                if prefix.startswith(sub_code):
+                    return (cat_title, sub_title)
+            # No sub-category match fallback
+            return (cat_title, "General")
+        else:
+            return ("Unknown", "Unknown")
     
     def fetch_webpage(self, url: str, max_retries: int = 3) -> str:
         """Fetch webpage content with retry mechanism"""
@@ -80,7 +213,168 @@ class NHAIScraper:
             }
             links_data.append(link_info)
         
+        return links_data 
+
+    def extract_links_with_categories(self, html_content: str) -> List[Dict]:
+        soup = BeautifulSoup(html_content, "html.parser")
+        links_data = []
+        seen_links = set()
+        
+        # Extract circular table rows assuming table structure like before
+        # You can adjust based on actual HTML
+        rows = soup.find_all("tr")
+        for tr in rows:
+            td_elems = tr.find_all("td")
+            if len(td_elems) < 3:
+                continue
+            
+            policy_no = td_elems[0].get_text(strip=True)
+            a_tag = td_elems[1].find("a")
+            if not a_tag:
+                continue
+            subject = a_tag.get_text(strip=True)
+            href = a_tag.get("href")
+            date = td_elems[2].get_text(strip=True) or "N/A"
+            
+            link_path_match = re.search(r"_d_id=(nhailibrary/Assets/Pdf/[^']+\.pdf)", href)
+            if not link_path_match:
+                continue
+            link_path = link_path_match.group(1)
+            
+            if link_path in seen_links:
+                continue
+            seen_links.add(link_path)
+            
+            category, sub_category = self.find_category_for_policy_no(policy_no)
+            
+            full_url = f"{self.base_url}/Circulars.aspx?_d_id={link_path}"
+            direct_pdf_url = f"{self.base_url}/{link_path}"
+            
+            link_info = {
+                "sr_no": str(len(links_data) + 1),
+                "category": category,
+                "sub_category": sub_category,
+                "subject": subject,
+                "policy_no": policy_no,
+                "date": date,
+                "link_path": link_path,
+                "full_url": full_url,
+                "direct_pdf_url": direct_pdf_url,
+                "extracted_on": datetime.now().isoformat()
+            }
+            links_data.append(link_info)
+        
         return links_data
+
+    def extract_links_with_categories_old(self, html_content: str) -> List[Dict]:
+        """Extract all PDF links with metadata AND category/sub-category from HTML content."""
+        soup = BeautifulSoup(html_content, "html.parser")
+        
+        links_data = []
+        seen_links = set()
+        
+        # Assuming categories are represented in 'div' or 'li' elements with class='category' etc.
+        # This is a generic placeholder; inspect actual site HTML and adjust selectors accordingly.
+        
+        # Example: iterate over each category block
+        for category_div in soup.find_all(class_="category"):
+            category_name = category_div.find(class_="category-title").get_text(strip=True) if category_div.find(class_="category-title") else "N/A"
+            
+            # Find all sub-category blocks inside this category
+            sub_categories = category_div.find_all(class_="sub-category")
+            
+            if not sub_categories:
+                # No sub-category, parse circulars directly under category_div
+                circular_rows = category_div.find_all("tr")
+                sub_category_name = "N/A"
+            else:
+                # Parse circulars per each sub-category
+                for sub_cat_div in sub_categories:
+                    sub_category_name = sub_cat_div.find(class_="sub-category-title").get_text(strip=True) if sub_cat_div.find(class_="sub-category-title") else "N/A"
+                    circular_rows = sub_cat_div.find_all("tr")
+                    
+                    for tr in circular_rows:
+                        td_elems = tr.find_all("td")
+                        if len(td_elems) < 3:
+                            continue
+                        
+                        policy_no = td_elems[0].get_text(strip=True)
+                        a_tag = td_elems[1].find("a")
+                        if not a_tag:
+                            continue
+                        subject = a_tag.get_text(strip=True)
+                        href = a_tag.get("href")
+                        date = td_elems[2].get_text(strip=True) or "N/A"
+                        
+                        link_path_match = re.search(r"_d_id=(nhailibrary/Assets/Pdf/[^']+\.pdf)", href)
+                        if not link_path_match:
+                            continue
+                        link_path = link_path_match.group(1)
+                        
+                        if link_path in seen_links:
+                            continue
+                        seen_links.add(link_path)
+                        
+                        full_url = f"{self.base_url}/Circulars.aspx?_d_id={link_path}"
+                        direct_pdf_url = f"{self.base_url}/{link_path}"
+                        
+                        link_info = {
+                            "sr_no": str(len(links_data) + 1),
+                            "category": category_name,
+                            "sub_category": sub_category_name,
+                            "subject": subject,
+                            "policy_no": policy_no,
+                            "date": date,
+                            "link_path": link_path,
+                            "full_url": full_url,
+                            "direct_pdf_url": direct_pdf_url,
+                            "extracted_on": datetime.now().isoformat()
+                        }
+                        links_data.append(link_info)
+                continue
+            
+            # If no sub-categories, parse rows directly from category_div
+            for tr in circular_rows:
+                td_elems = tr.find_all("td")
+                if len(td_elems) < 3:
+                    continue
+                
+                policy_no = td_elems.get_text(strip=True)
+                a_tag = td_elems[1].find("a")
+                if not a_tag:
+                    continue
+                subject = a_tag.get_text(strip=True)
+                href = a_tag.get("href")
+                date = td_elems[2].get_text(strip=True) or "N/A"
+                
+                link_path_match = re.search(r"_d_id=(nhailibrary/Assets/Pdf/[^']+\.pdf)", href)
+                if not link_path_match:
+                    continue
+                link_path = link_path_match.group(1)
+                
+                if link_path in seen_links:
+                    continue
+                seen_links.add(link_path)
+                
+                full_url = f"{self.base_url}/Circulars.aspx?_d_id={link_path}"
+                direct_pdf_url = f"{self.base_url}/{link_path}"
+                
+                link_info = {
+                    "sr_no": str(len(links_data) + 1),
+                    "category": category_name,
+                    "sub_category": "N/A",
+                    "subject": subject,
+                    "policy_no": policy_no,
+                    "date": date,
+                    "link_path": link_path,
+                    "full_url": full_url,
+                    "direct_pdf_url": direct_pdf_url,
+                    "extracted_on": datetime.now().isoformat()
+                }
+                links_data.append(link_info)
+        
+        return links_data
+
     
     def load_existing_links(self) -> Set[str]:
         """Load existing links from file"""
@@ -139,6 +433,9 @@ class NHAIScraper:
         try:
             print("Starting NHAI circular scraper...")
             
+            # Load or update category tree first
+            self.update_category_tree()
+            
             # Try multiple endpoints to get circular data
             html_content = None
             endpoints_to_try = [
@@ -174,7 +471,8 @@ class NHAIScraper:
 
             # Try to extract links using multiple patterns
             print("Extracting links from HTML...")
-            current_links = self.extract_links_from_html(html_content)
+            # current_links = self.extract_links_from_html(html_content)
+            current_links = self.extract_links_with_categories(html_content)
             print(f"Total links found with primary pattern: {len(current_links)}")
             
             # If no links found, try alternative extraction methods
@@ -279,6 +577,121 @@ class NHAIScraper:
         
         return [circular['full_url'] for circular in new_circulars]
 
+
+    def _extract_circulars_from_soup(self, soup: BeautifulSoup, category: str, sub_category: str, seen_links: Set[str]) -> List[Dict]:
+        """
+        Uses the original extract_links_from_html logic to extract circulars, then attaches category/sub-category.
+        """
+        html_content = str(soup)
+        circulars = self.extract_links_from_html(html_content)
+        result = []
+        for circ in circulars:
+            link_path = circ['link_path']
+            if link_path in seen_links:
+                continue
+            seen_links.add(link_path)
+            circ['category'] = category
+            circ['sub_category'] = sub_category
+            result.append(circ)
+        return result
+
+    def scrape_all_circulars_dynamically(self) -> List[Dict]:
+        """
+        Scrapes all circulars by dynamically interacting with the ASP.NET form,
+        iterating through categories and sub-categories.
+        """
+        all_circulars = []
+        seen_links = set()
+        
+        # 1. Initial GET request
+        print("Fetching initial page to get categories and form state...")
+        initial_response = self.session.get(f"{self.base_url}/CircularTree")
+        soup = BeautifulSoup(initial_response.text, "html.parser")
+        
+        # 2. Extract initial categories and form data
+        initial_form_data = get_form_data(soup)
+        categories = scrape_categories_from_live(initial_response.text)
+        
+        print(f"Found {len(categories)} main categories. Now iterating through them...")
+
+        # 3. Loop through each main category
+        for cat_id, cat_name in categories.items():
+            print(f"\n--- Processing Category: {cat_name} ---")
+            
+            # Prepare POST data to select this category
+            post_data = initial_form_data.copy()
+            post_data.update({
+                'ctl00$MainContent$DropDownList1': cat_id,
+                '__EVENTTARGET': 'ctl00$MainContent$DropDownList1', # The control that triggered the postback
+            })
+            
+            # 4. Make the POST request
+            time.sleep(2) # Be polite to the server
+            cat_response = self.session.post(f"{self.base_url}/CircularTree", data=post_data)
+            cat_soup = BeautifulSoup(cat_response.text, "html.parser")
+
+            # 5. Extract sub-categories from the response
+            sub_categories = {}
+            subcat_select = cat_soup.find("select", id="MainContent_DropDownList2")
+            if subcat_select:
+                for opt in subcat_select.find_all("option"):
+                    if opt.get("value"):
+                        sub_categories[opt.get("value")] = opt.text.strip()
+
+            if not sub_categories:
+                print("  No sub-categories found. Checking for circulars directly...")
+                # (Add logic to parse circulars here if they appear without sub-cat selection)
+                continue
+
+            # 6. Loop through each sub-category
+            for subcat_id, subcat_name in sub_categories.items():
+                print(f"  -- Processing Sub-category: {subcat_name} --")
+                # Get the latest form state from the previous response
+                subcat_form_data = get_form_data(cat_soup)
+                post_data_subcat = subcat_form_data.copy()
+                post_data_subcat.update({
+                    'ctl00$MainContent$DropDownList1': cat_id,
+                    'ctl00$MainContent$DropDownList2': subcat_id,
+                    '__EVENTTARGET': 'ctl00$MainContent$DropDownList2',
+                })
+                time.sleep(1)
+                subcat_response = self.session.post(f"{self.base_url}/CircularTree", data=post_data_subcat)
+                # Save the POST response HTML for inspection
+                debug_filename = f"output/debug_{cat_id}_{subcat_id}.html"
+                with open(debug_filename, "w", encoding="utf-8") as f:
+                    f.write(subcat_response.text)
+                print(f"    Saved POST response HTML to {debug_filename}")
+                final_soup = BeautifulSoup(subcat_response.text, "html.parser")
+                # 7. Extract circulars from this final response page
+                circulars_found = self._extract_circulars_from_soup(final_soup, cat_name, subcat_name, seen_links)
+                if circulars_found:
+                    print(f"    Found {len(circulars_found)} circulars.")
+                    all_circulars.extend(circulars_found)
+
+        return all_circulars
+
+    def scrape_and_check_updates(self):
+        """Main method to run the dynamic scraper and check for updates."""
+        try:
+            print("Starting NHAI circular scraper with dynamic category handling...")
+            
+            # Run the new dynamic scraper
+            current_links = self.scrape_all_circulars_dynamically()
+            print(f"\nTotal circulars found across all categories: {len(current_links)}")
+
+            # Find and save new circulars
+            new_circulars = self.find_new_circulars(current_links)
+            
+            self.save_all_links(current_links)
+            self.save_new_circulars(new_circulars)
+            
+            # ... (rest of your summary printing logic) ...
+            
+        except Exception as e:
+            print(f"An error occurred during dynamic scraping: {e}")
+            return False
+        return True
+
 def main():
     """Main function to run the scraper"""
     scraper = NHAIScraper()
@@ -292,6 +705,7 @@ def main():
     
     # Run the scraper
     success = scraper.scrape_and_check_updates()
+    
     
     if success:
         print("\nFiles created/updated:")

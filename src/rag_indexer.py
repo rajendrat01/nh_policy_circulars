@@ -109,15 +109,48 @@ class NHAIRAGIndexer:
                 print(f"✓ Text extracted successfully ({len(text_content)} chars)")
                 used_ocr = False
             # Fallback to OCR if text is too short (likely scanned)
-            elif use_ocr and self.ocr_reader:
-                print("Text extraction insufficient, trying OCR...")
-                ocr_content = self._extract_text_ocr(temp_file)
-                if len(ocr_content.strip()) > 50:
-                    print(f"✓ OCR extraction successful ({len(ocr_content)} chars)")
-                    text_content = ocr_content
-                    used_ocr = True
-                else:
-                    print("⚠ OCR extraction yielded minimal text")
+            elif use_ocr:
+                print("Text extraction insufficient, trying Gemini OCR...")
+                try:
+                    from gemini_ocr import gemini_ocr_image
+                    import os
+                    from PIL import Image
+                    import fitz
+                    import io
+                    gemini_api_key = os.environ.get("GEMINI_API_KEY")
+                    if not gemini_api_key:
+                        raise RuntimeError("GEMINI_API_KEY environment variable not set.")
+                    doc = fitz.open(temp_file)
+                    full_text = ""
+                    for page_num in range(doc.page_count):
+                        page = doc[page_num]
+                        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                        img_data = pix.tobytes("png")
+                        image = Image.open(io.BytesIO(img_data))
+                        gemini_text = gemini_ocr_image(image, gemini_api_key)
+                        if gemini_text and not gemini_text.startswith("[Gemini OCR Error]"):
+                            full_text += f"\n--- Page {page_num + 1} (Gemini) ---\n{gemini_text}\n"
+                        else:
+                            # Fallback to EasyOCR for this page
+                            print(f"Gemini failed for page {page_num+1}, using EasyOCR fallback...")
+                            if self.ocr_reader:
+                                import numpy as np
+                                img_array = np.array(image)
+                                results = self.ocr_reader.readtext(img_array, detail=0)
+                                page_text = " ".join(results)
+                                full_text += f"\n--- Page {page_num + 1} (EasyOCR) ---\n{page_text}\n"
+                            else:
+                                print("No EasyOCR available for fallback.")
+                    doc.close()
+                    if len(full_text.strip()) > 50:
+                        print(f"✓ OCR extraction successful ({len(full_text)} chars)")
+                        text_content = full_text
+                        used_ocr = True
+                    else:
+                        print("⚠ OCR extraction yielded minimal text")
+                        used_ocr = False
+                except Exception as e:
+                    print(f"Gemini OCR error: {e}")
                     used_ocr = False
             else:
                 print("⚠ No OCR available, using basic text extraction")
