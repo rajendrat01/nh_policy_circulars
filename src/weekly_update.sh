@@ -15,7 +15,7 @@ source nhai_circulars_env/bin/activate
 /home/ec2-user/nhai_policy_circulars/nhai_circulars_env/bin/python src/enrich_circulars_v2.py \
     --input output/selenium_circulars.jsonl \
     --output output/circulars_with_text.jsonl \
-    --use_ocr --versose
+    --use_ocr --verbose
 
 ## 4. Run the standalone indexer v4
 /home/ec2-user/nhai_policy_circulars/nhai_circulars_env/bin/python src/rag_indexer_v4.py index \
