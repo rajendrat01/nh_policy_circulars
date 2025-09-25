@@ -66,6 +66,7 @@ firefox.tar.bz2
 firefox-aarch64.tar.xz
 *.tar.gz
 index.html?product=firefox-esr-latest*
+firefox/*
 
 # IDE Files
 .vscode/
