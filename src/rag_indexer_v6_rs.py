@@ -62,38 +62,6 @@ class NHAIRAGIndexerV6RS:
         self.indexed_hashes_path = "output/indexed_hashes_road_safety.log"
         os.makedirs(self.vector_db_path, exist_ok=True)
         
-        # Road Safety specific filtering patterns
-        self.road_safety_keywords = [
-            # Main categories
-            "road safety", "traffic safety", "highway safety", "safety division",
-            "safety protocols", "safety standards", "safety guidelines",
-            "safety measures", "safety requirements", "safety procedures",
-            
-            # Specific road safety terms
-            "accident prevention", "black spot", "blackspot", "accident prone",
-            "traffic management", "speed limit", "road marking", "signage",
-            "barrier", "guard rail", "crash barrier", "median",
-            "intersection", "junction", "roundabout", "traffic signal",
-            "pedestrian", "cyclist", "motorcycle", "heavy vehicle",
-            "overtaking", "lane discipline", "helmet", "seat belt",
-            
-            # NHAI specific safety codes
-            "safety audit", "road safety audit", "traffic impact assessment",
-            "environmental clearance", "safety clearance", "safety certificate",
-            "safety inspection", "safety compliance", "safety monitoring",
-            
-            # Policy numbers related to safety (common patterns)
-            "1.8", "1.9", "2.8", "2.9", "3.8", "3.9", "4.8", "4.9",
-            "safety", "traffic", "accident", "blackspot"
-        ]
-        
-        # Policy number patterns for road safety (based on category name, not number)
-        self.road_safety_policy_patterns = [
-            r".*safety.*",  # Any policy with "safety" in the number
-            r".*traffic.*",  # Any policy with "traffic" in the number
-            r".*accident.*",  # Any policy with "accident" in the number
-            r".*road.*",  # Any policy with "road" in the number
-        ]
         
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
@@ -104,38 +72,16 @@ class NHAIRAGIndexerV6RS:
             headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
         )
         print(f"✓ RAG Indexer v6 Road Safety initialized with model: {embedding_model}")
-        print(f"✓ Filtering for Category 12: ROAD SAFETY")
-        print(f"✓ Road Safety keywords: {len(self.road_safety_keywords)} patterns")
-        print(f"✓ Policy patterns: {len(self.road_safety_policy_patterns)} patterns")
+        print(f"✓ Filtering for Category 12: ROAD SAFETY (category-based only)")
 
     def is_road_safety_document(self, circular: Dict) -> bool:
         """
         Determines if a circular is related to road safety based on:
-        1. Main Category: "ROAD SAFETY" (Category 12 from NHAI website)
-        2. Subject/content keywords as secondary filter
+        Main Category: "ROAD SAFETY" (Category 12 from NHAI website) ONLY
         """
-        # Primary filter: Check if it belongs to "ROAD SAFETY" category
+        # Only filter: Check if it belongs to "ROAD SAFETY" category
         category = circular.get('category', '').lower()
         if 'road safety' in category:
-            return True
-        
-        # Secondary filter: Check for road safety keywords in subject/content
-        subject = circular.get('subject', '').lower()
-        content = circular.get('content', '').lower()
-        
-        # Check subject for road safety keywords
-        for keyword in self.road_safety_keywords:
-            if keyword.lower() in subject:
-                return True
-        
-        # Check content for road safety keywords (require 2+ matches for content)
-        safety_keyword_count = 0
-        for keyword in self.road_safety_keywords:
-            if keyword.lower() in content:
-                safety_keyword_count += 1
-        
-        # If content has 2+ road safety keywords, consider it road safety related
-        if safety_keyword_count >= 2:
             return True
         
         return False
