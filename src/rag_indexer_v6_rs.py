@@ -77,11 +77,11 @@ class NHAIRAGIndexerV6RS:
     def is_road_safety_document(self, circular: Dict) -> bool:
         """
         Determines if a circular is related to road safety based on:
-        Main Category: "ROAD SAFETY" (Category 12 from NHAI website) ONLY
+        Main Category: "12 Road Safety" (Category 12 from NHAI website) ONLY
         """
-        # Only filter: Check if it belongs to "ROAD SAFETY" category
-        category = circular.get('category', '').lower()
-        if 'road safety' in category:
+        # Only filter: Check if it belongs to "12 Road Safety" category exactly
+        category = circular.get('category', '')
+        if category == "12 Road Safety":
             return True
         
         return False
